@@ -2,11 +2,21 @@ from flask import Flask, request, session, redirect, url_for, jsonify, render_te
 import firebase_admin
 from firebase_admin import credentials, auth
 import os
+import json
 from flask_cors import CORS
 
-# Initialize Firebase Admin SDK with your credentials.json file
-cred = credentials.Certificate("firebase-key.json")
-firebase_admin.initialize_app(cred)
+# Get Firebase credentials from environment variables
+firebase_service_account = os.getenv('FIREBASE_SERVICE_ACCOUNT')
+firebase_database_url = os.getenv('FIREBASE_DATABASE_URL')
+
+if not firebase_service_account or not firebase_database_url:
+    raise EnvironmentError("Environment variables for Firebase are not set correctly.")
+
+# Initialize Firebase Admin SDK
+cred = credentials.Certificate(json.loads(firebase_service_account))
+firebase_admin.initialize_app(cred, {
+    'databaseURL': firebase_database_url
+})
 
 app = Flask(__name__)
 
@@ -60,19 +70,12 @@ def login():
     except Exception as e:
         print(f"Error: {str(e)}")  # Log the error
         return jsonify({"error": str(e)}), 401
+
 # Logout Route
 @app.route('/logout')
 def logout():
-    # Clear the user's session data to terminate the session
     session.clear()
-    print("Session cleared. User logged out.")
-    
-    # Set a session variable to trigger auto-reload on the next page load
-    session['logged_out'] = True
-    
-    # Redirect to the officer manager login page
-    return redirect(url_for('loginpage_officer_manager'))
-
+    return redirect(url_for('index'))  # Redirect to landing page
 
 # Routes for Resort Owner
 @app.route('/resort-owner-dashboard')
